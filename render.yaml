@@ -4,8 +4,14 @@ services:
     env: python
     plan: free
     branch: main
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      apt-get update && apt-get install -y tesseract-ocr
+      pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: SECRET_KEY
+        value: replace-with-random-secret-key-here
+      - key: TESSERACT_CMD
+        value: /usr/bin/tesseract

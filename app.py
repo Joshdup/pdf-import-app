@@ -11,12 +11,12 @@ from flask import Flask, flash, redirect, render_template, request, send_from_di
 from PIL import Image
 
 app = Flask(__name__)
-app.secret_key = "replace-with-a-secure-key"
+app.secret_key = os.environ.get("SECRET_KEY", "replace-with-a-secure-key")
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["EXPORT_FOLDER"] = "exports"
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 os.makedirs(app.config["EXPORT_FOLDER"], exist_ok=True)
