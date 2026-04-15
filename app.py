@@ -103,22 +103,89 @@ def identify_people(description):
 
 
 def parse_transactions(text, source_label):
-    pattern = r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s+(.+?)\s+(-?\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)"
-    matches = re.findall(pattern, text)
+    # Updated regex to handle ABSA format: "1 Apr 2016  Description  Amount  Balance"
+    # and flexible date formats
+    lines = text.split('\n')
     transactions = []
-    for date_text, description, amount_text in matches:
-        date_value = normalize_date(date_text)
-        amount = parse_amount(amount_text)
-        category = categorize(description)
-        people = identify_people(description)
-        transactions.append({
-            "Date": date_value,
-            "Description": description.strip(),
-            "Amount": amount,
-            "Category": category,
-            "People Mentioned": people,
-            "Source": source_label
-        })
+    
+    # ABSA date format: "1 Apr 2016", "13 Apr 2016", etc.
+    date_pattern = r'^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Jen|Feb|Mrt|Apr|Mei|Jun|Jul|Aug|Sep|Okt|Nov|Des)\s+(\d{4})'
+    
+    # Amount pattern: handles "123,45" or "123 456,78" or "123,45 -" (negative)
+    amount_pattern = r'(\d{1,3}(?:\s?\d{3})*(?:,\d{2})?)\s*(-)?'
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        
+        # Check if line starts with a date
+        date_match = re.match(date_pattern, line, re.IGNORECASE)
+        if date_match:
+            day, month_str, year = date_match.groups()
+            
+            # Map month names (English and Afrikaans)
+            month_map = {
+                'Jan': '01', 'Jen': '01', 'Feb': '02', 'Mrt': '03', 'Mar': '03',
+                'Apr': '04', 'Mei': '05', 'May': '05', 'Jun': '06', 'Jul': '07',
+                'Aug': '08', 'Sep': '09', 'Okt': '10', 'Oct': '10', 'Nov': '11', 'Des': '12', 'Dec': '12'
+            }
+            month = month_map.get(month_str, '01')
+            date_value = f"{year}-{month}-{day.zfill(2)}"
+            
+            # Extract description and amounts from the same line
+            rest_of_line = line[date_match.end():].strip()
+            
+            # Find all amounts in the line (description followed by amounts)
+            # The last amount before end or the pattern is usually the transaction amount
+            amounts = re.findall(amount_pattern, rest_of_line)
+            
+            if amounts:
+                # Get the last substantial amount (not just trailing whitespace)
+                for amount_str, is_negative in reversed(amounts):
+                    try:
+                        # Parse amount: remove spaces, replace comma with dot
+                        parsed_amount = float(amount_str.replace(' ', '').replace(',', '.'))
+                        if is_negative:
+                            parsed_amount = -parsed_amount
+                        
+                        # Extract description (everything before the amount)
+                        amount_start = rest_of_line.rfind(amount_str)
+                        if amount_start > 0:
+                            description = rest_of_line[:amount_start].strip()
+                        else:
+                            description = "Transaction"
+                        
+                        # Continue reading next lines if they are part of the same transaction
+                        j = i + 1
+                        while j < len(lines):
+                            next_line = lines[j].strip()
+                            # Stop if we hit another date or an empty line
+                            if not next_line or re.match(date_pattern, next_line, re.IGNORECASE):
+                                break
+                            # Add to description if it looks like a detail line
+                            if next_line and not re.match(r'^\d', next_line):
+                                description += " " + next_line
+                            j += 1
+                        
+                        category = categorize(description)
+                        people = identify_people(description)
+                        
+                        transactions.append({
+                            "Date": date_value,
+                            "Description": description.strip(),
+                            "Amount": round(parsed_amount, 2),
+                            "Category": category,
+                            "People Mentioned": people,
+                            "Source": source_label
+                        })
+                        
+                        i = j - 1
+                        break
+                    except (ValueError, IndexError):
+                        pass
+        
+        i += 1
+    
     return transactions
 
 
