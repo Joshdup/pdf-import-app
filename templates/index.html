@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Statement Uploader</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+    <main class="page-shell">
+        <section class="card">
+            <div class="hero">
+                <h1>Statement Uploader</h1>
+                <p>Upload multiple PDF or image files and get extracted text in one place.</p>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="upload-form">
+                <label class="file-field">
+                    <span>Choose files</span>
+                    <input type="file" name="documents" multiple accept=".pdf,image/*" />
+                </label>
+                <button type="submit" class="primary-btn">Upload & Extract</button>
+            </form>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="alerts">
+                {% for category, message in messages %}
+                <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% if summary %}
+            <section class="result-card">
+                <div class="top-row">
+                    <div>
+                        <h2>Parsed Transactions</h2>
+                        <p>{{ summary.count }} rows · Total amount: {{ summary.total_amount }}</p>
+                    </div>
+                    {% if download_link %}
+                    <a href="{{ download_link }}" class="secondary-btn">Download Excel</a>
+                    {% endif %}
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-block">
+                        <strong>Categories</strong>
+                        {% for category, total in summary.category_totals.items() %}
+                        <div>{{ category }}: {{ total }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="summary-block">
+                        <strong>People</strong>
+                        {% for person, total in summary.people_totals.items() %}
+                        <div>{{ person }}: {{ total }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Category</th>
+                                <th>People Mentioned</th>
+                                <th>Source</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in transactions %}
+                            <tr>
+                                <td>{{ row["Date"] }}</td>
+                                <td>{{ row["Description"] }}</td>
+                                <td>{{ row["Amount"] }}</td>
+                                <td>{{ row["Category"] }}</td>
+                                <td>{{ row["People Mentioned"] }}</td>
+                                <td>{{ row["Source"] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% elif result_text %}
+            <section class="result-card">
+                <h2>Extracted Text</h2>
+                <pre>{{ result_text }}</pre>
+            </section>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,4 @@
+- [ ] Create frontend and backend for multiple PDF/image upload and text extraction.
+- [ ] Provide a friendly responsive UI for a friend to use.
+- [ ] Include install and run instructions.
+- [ ] Keep project files in `pdf-import-app`.
